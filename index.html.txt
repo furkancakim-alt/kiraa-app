@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Kira Takip FINAL</title>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<style>
+body{font-family:Arial;background:#0f172a;color:white}
+.box{background:#1e293b;padding:15px;margin:10px;border-radius:10px}
+input,button,select{padding:8px;margin:5px;border-radius:6px;border:none}
+button{background:#3b82f6;color:white;cursor:pointer}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+td,th{padding:8px;border-bottom:1px solid #334155}
+.green{color:#22c55e;font-weight:bold}
+.red{color:#ef4444;font-weight:bold}
+.xbtn{background:#ef4444;border:none;padding:3px 6px;cursor:pointer}
+
+/* 🚪 logout */
+.topbar{
+display:flex;
+justify-content:flex-end;
+padding:10px;
+}
+.logout{
+background:#ef4444;
+color:white;
+padding:6px 12px;
+border-radius:6px;
+cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box" id="loginBox">
+<h2>Giriş</h2>
+<input id="user" placeholder="Kullanıcı">
+<input id="pass" type="password" placeholder="Şifre">
+<button onclick="login()">Giriş</button>
+</div>
+
+<div id="app" style="display:none">
+
+<!-- 🚪 TOP BAR -->
+<div class="topbar">
+<button class="logout" onclick="logout()">Çıkış</button>
+</div>
+
+<h2 id="title"></h2>
+
+<!-- ADMIN -->
+<div class="box" id="adminPanel" style="display:none">
+
+<h3>Admin</h3>
+
+<input id="newName" placeholder="İsim ekle">
+<button onclick="addPerson()">Ekle</button>
+
+<br><br>
+
+<select id="manageName"></select>
+<button onclick="deleteSelectedPerson()">Seçili İsmi Sil</button>
+
+<br><br>
+
+<select id="nameSelect"></select>
+<input id="amount" type="number" placeholder="Tutar">
+<input id="date" type="date">
+<button onclick="add()">Kaydet</button>
+
+<table>
+<thead>
+<tr>
+<th>İsim</th>
+<th>Tutar</th>
+<th>Tarih</th>
+<th>Durum</th>
+<th>Sil</th>
+</tr>
+</thead>
+<tbody id="list"></tbody>
+</table>
+
+</div>
+
+<!-- REPORT -->
+<div class="box" id="reportPanel" style="display:none">
+
+<h3>Rapor</h3>
+
+<select id="filterName">
+<option value="all">Tümü</option>
+</select>
+
+<input type="date" id="start">
+<input type="date" id="end">
+
+<button onclick="report()">Getir</button>
+<button onclick="excel()">Excel</button>
+
+<h3 id="total"></h3>
+
+<table>
+<thead>
+<tr>
+<th>İsim</th>
+<th>Tutar</th>
+<th>Tarih</th>
+<th>Sil</th>
+</tr>
+</thead>
+<tbody id="rlist"></tbody>
+</table>
+
+</div>
+
+</div>
+
+<script>
+
+let data = JSON.parse(localStorage.getItem("data") || "[]");
+let people = JSON.parse(localStorage.getItem("people") || "[]");
+
+/* LOGIN */
+function login(){
+
+let u=user.value;
+let p=pass.value;
+
+if(u==="admin" && p==="1234"){
+loginBox.style.display="none";
+app.style.display="block";
+adminPanel.style.display="block";
+title.innerText="Admin";
+renderAll();
+return;
+}
+
+if(u==="besiroglu" && p==="6161"){
+loginBox.style.display="none";
+app.style.display="block";
+reportPanel.style.display="block";
+title.innerText="Rapor";
+renderAll();
+return;
+}
+
+alert("Hatalı giriş");
+}
+
+/* 🚪 LOGOUT */
+function logout(){
+
+loginBox.style.display="block";
+app.style.display="none";
+adminPanel.style.display="none";
+reportPanel.style.display="none";
+
+user.value="";
+pass.value="";
+}
+
+/* PERSON */
+function addPerson(){
+people.push({id:Date.now(),name:newName.value});
+localStorage.setItem("people",JSON.stringify(people));
+newName.value="";
+renderAll();
+}
+
+/* DELETE PERSON */
+function deleteSelectedPerson(){
+
+let name = manageName.value;
+
+people = people.filter(p=>p.name!==name);
+data = data.filter(d=>d.name!==name);
+
+localStorage.setItem("people",JSON.stringify(people));
+localStorage.setItem("data",JSON.stringify(data));
+
+renderAll();
+}
+
+/* ADD */
+function add(){
+
+data.push({
+id:Date.now(),
+name:nameSelect.value,
+amount:Number(amount.value),
+date:date.value
+});
+
+localStorage.setItem("data",JSON.stringify(data));
+renderAll();
+}
+
+/* DELETE DATA */
+function delData(id){
+data = data.filter(d=>d.id!==id);
+localStorage.setItem("data",JSON.stringify(data));
+renderAll();
+}
+
+/* RENDER ALL */
+function renderAll(){
+
+nameSelect.innerHTML = people.map(p=>
+`<option value="${p.name}">${p.name}</option>`
+).join("");
+
+manageName.innerHTML = people.map(p=>
+`<option value="${p.name}">${p.name}</option>`
+).join("");
+
+filterName.innerHTML =
+`<option value="all">Tümü</option>` +
+people.map(p=>
+`<option value="${p.name}">${p.name}</option>`
+).join("");
+
+render();
+report();
+}
+
+/* ADMIN TABLE */
+function render(){
+
+list.innerHTML="";
+
+for(let d of data){
+
+let ok = d.amount > 0;
+
+list.innerHTML += `
+<tr>
+<td>${d.name}</td>
+<td>${d.amount}</td>
+<td>${d.date}</td>
+<td class="${ok?'green':'red'}">
+${ok?'Ödedi':'Ödemedi'}
+</td>
+<td><button class="xbtn" onclick="delData(${d.id})">x</button></td>
+</tr>`;
+}
+}
+
+/* REPORT */
+function report(){
+
+let s=new Date(start.value||"1900-01-01");
+let e=new Date(end.value||"2999-12-31");
+
+let f=data.filter(d=>{
+let x=new Date(d.date);
+let nameOk = filterName.value==="all" || d.name===filterName.value;
+return x>=s && x<=e && nameOk;
+});
+
+let t=f.reduce((a,b)=>a+b.amount,0);
+
+total.innerText="Toplam: "+t;
+
+rlist.innerHTML="";
+
+for(let d of f){
+rlist.innerHTML+=`
+<tr>
+<td>${d.name}</td>
+<td>${d.amount}</td>
+<td>${d.date}</td>
+<td><button class="xbtn" onclick="delData(${d.id})">x</button></td>
+</tr>`;
+}
+}
+
+/* EXCEL */
+function excel(){
+let ws=XLSX.utils.json_to_sheet(data);
+let wb=XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb,ws,"Data");
+XLSX.writeFile(wb,"rapor.xlsx");
+}
+
+</script>
+
+</body>
+</html>
